@@ -1,7 +1,7 @@
 use std::net::UdpSocket;
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
-use crate::get_ip_addr_player2;
+use crate::{get_ip_addr_player1, get_ip_addr_player2};
 
 const SIZE: usize = 50;
 
@@ -23,12 +23,13 @@ pub(crate) fn player2(socket: UdpSocket, sx: Sender<String>, rrx: Receiver<Strin
 
     println!("Player 2 connection is active: ");
 
+    socket.send_to(b"message from player 2 to player 1", get_ip_addr_player1()).expect("Couldn't send message from player 2 -> player 1");
+
     loop {
         let mut buf = [0 as u8; SIZE];
         let (num_bytes, src_addr) = socket.recv_from(&mut buf)?;
         let msg = String::from_utf8((&buf[0..num_bytes]).to_vec()).unwrap();
         println!("{}, {}", msg, src_addr);
-
 
         //send client data through channel
         match sx.send(String::from(msg)){
@@ -37,17 +38,14 @@ pub(crate) fn player2(socket: UdpSocket, sx: Sender<String>, rrx: Receiver<Strin
                 println!("Error sending msg: {}", e)
             }
         }
-
-
-        match rx.try_recv() {
-            Ok(msg) => {
-                let e = String::from("Error: ".to_owned() + &msg);
-                socket.send_to(e.as_bytes(), src_addr).expect("TODO: panic message");
-            }
-            Err(e) => {
-                //no message in queue, do nothing
-            }
-        }
-
+        // match rx.try_recv() {
+        //     Ok(msg) => {
+        //         let e = String::from("Error: ".to_owned() + &msg);
+        //         socket.send_to(e.as_bytes(), src_addr).expect("TODO: panic message");
+        //     }
+        //     Err(e) => {
+        //         //no message in queue, do nothing
+        //     }
+        // }
     }
 }
